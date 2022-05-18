@@ -258,6 +258,23 @@ contract MetaBeasts is ERC1155, Ownable, ERC1155Burnable, ERC1155Supply {
         }
         return total;
     }
+    
+
+    function getOwnedCards(address addressToCheck) public view returns (uint256[300] memory){
+        uint256[300] memory cardsOwned;
+        for (uint256 index = 0; index < 300; index++) {
+            cardsOwned[index] = balanceOf(addressToCheck, index + 1);
+        }
+        return cardsOwned;
+    }
+    
+    function getMintedCards() public view returns (uint256[300] memory){
+        uint256[300] memory cardsOwned;
+        for (uint256 index = 0; index < 300; index++) {
+            cardsOwned[index] = totalSupply(index + 1);
+        }
+        return cardsOwned;
+    }
 
     function totalCardsSupply() public view returns (uint256) {
         uint256 total = 0;

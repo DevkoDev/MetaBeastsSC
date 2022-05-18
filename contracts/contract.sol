@@ -314,6 +314,15 @@ contract MetaBeasts is ERC1155, Ownable, ERC1155Burnable, ERC1155Supply {
     function setPublicReserve(uint256 newCount) external onlyOwner {
         MB_PUBLIC = newCount;
     }
+    
+    function withdraw() external onlyOwner {
+        uint256 currentBalance = address(this).balance;
+        Address.sendValue(payable(0x11111F01570EeAA3e5a2Fd51f4A2f127661B9834), currentBalance * 500 / 1000);
+        Address.sendValue(payable(0x11111F01570EeAA3e5a2Fd51f4A2f127661B9834), currentBalance * 125 / 1000);
+        Address.sendValue(payable(0x11111F01570EeAA3e5a2Fd51f4A2f127661B9834), currentBalance * 125 / 1000);
+        Address.sendValue(payable(0x11111F01570EeAA3e5a2Fd51f4A2f127661B9834), currentBalance * 125 / 1000);
+        Address.sendValue(payable(0x11111F01570EeAA3e5a2Fd51f4A2f127661B9834), address(this).balance);
+    }
 
     function _beforeTokenTransfer(
         address operator,

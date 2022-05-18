@@ -34,6 +34,7 @@ contract MetaBeasts is ERC1155, Ownable, ERC1155Burnable, ERC1155Supply {
 
     bool public privateLive;
     bool public publicLive;
+    address public teamWallet = 0x11111F01570EeAA3e5a2Fd51f4A2f127661B9834; // should be a multi signature wallet address
 
     constructor() ERC1155("https://gateway.pinata.cloud/ipfs/QmZMWmqX9jatszvV5PoViFzsg77fNuUHo3KkQSBCruEVfT/{id}.json") {
         for (uint256 index = 1; index <= 100; index++) {
@@ -55,6 +56,11 @@ contract MetaBeasts is ERC1155, Ownable, ERC1155Burnable, ERC1155Supply {
             _Limits[index] = 54;
         }
         _Limits[100] = 21;
+    }
+
+    modifier onlyTeam() {
+        require(msg.sender == teamWallet, "NOT_ALLOWED");
+        _;
     }
 
     modifier notContract() {
@@ -84,11 +90,11 @@ contract MetaBeasts is ERC1155, Ownable, ERC1155Burnable, ERC1155Supply {
         return PRIVATE_SIGNER == hash.recover(signature);
     }
 
-    function setURI(string memory newuri) public onlyOwner {
+    function setURI(string memory newuri) public onlyTeam {
         _setURI(newuri);
     }
 
-    function gift(address[] calldata receivers) external onlyOwner {
+    function gift(address[] calldata receivers) external onlyTeam {
         require(
             teamChestsMinted + (receivers.length / 2) <= MB_TEAM_RESERVE,
             "EXCEED_TEAM_RESERVE"
@@ -100,7 +106,7 @@ contract MetaBeasts is ERC1155, Ownable, ERC1155Burnable, ERC1155Supply {
         }
     }
 
-    function founderMint(uint256 tokenQuantity) external onlyOwner {
+    function founderMint(uint256 tokenQuantity) external onlyTeam {
         require(
             teamChestsMinted + (tokenQuantity / 2) <= MB_TEAM_RESERVE,
             "EXCEED_TEAM_RESERVE"
@@ -110,7 +116,7 @@ contract MetaBeasts is ERC1155, Ownable, ERC1155Burnable, ERC1155Supply {
         mintRandom(msg.sender, tokenQuantity);
     }
 
-    function giftChest(address[] calldata receivers) external onlyOwner {
+    function giftChest(address[] calldata receivers) external onlyTeam {
         require(
             teamChestsMinted + receivers.length <= MB_TEAM_RESERVE,
             "EXCEED_TEAM_RESERVE"
@@ -121,7 +127,7 @@ contract MetaBeasts is ERC1155, Ownable, ERC1155Burnable, ERC1155Supply {
         }
     }
 
-    function founderMintChest(uint256 tokenQuantity) external onlyOwner {
+    function founderMintChest(uint256 tokenQuantity) external onlyTeam {
         require(
             teamChestsMinted + tokenQuantity <= MB_TEAM_RESERVE,
             "EXCEED_TEAM_RESERVE"
@@ -296,27 +302,31 @@ contract MetaBeasts is ERC1155, Ownable, ERC1155Burnable, ERC1155Supply {
         return total;
     }
 
-    function togglePublicMintStatus() external onlyOwner {
+    function togglePublicMintStatus() external onlyTeam {
         publicLive = !publicLive;
     }
 
-    function togglePrivateStatus() external onlyOwner {
+    function togglePrivateStatus() external onlyTeam {
         privateLive = !privateLive;
     }
 
-    function setPrivate(uint256 newCount) external onlyOwner {
+    function setPrivate(uint256 newCount) external onlyTeam {
         MB_PRIVATE = newCount;
     }
 
-    function setTeamReserve(uint256 newCount) external onlyOwner {
+    function setTeamReserve(uint256 newCount) external onlyTeam {
         MB_TEAM_RESERVE = newCount;
     }
 
-    function setPublicReserve(uint256 newCount) external onlyOwner {
+    function setPublicReserve(uint256 newCount) external onlyTeam {
         MB_PUBLIC = newCount;
     }
+
+    function setNewTeamWallet(address newAddress) external onlyTeam {
+        teamWallet = newAddress;
+    }
     
-    function withdraw() external onlyOwner {
+    function withdraw() external onlyTeam {
         uint256 currentBalance = address(this).balance;
         Address.sendValue(payable(0x11111F01570EeAA3e5a2Fd51f4A2f127661B9834), currentBalance * 500 / 1000);
         Address.sendValue(payable(0x11111F01570EeAA3e5a2Fd51f4A2f127661B9834), currentBalance * 125 / 1000);

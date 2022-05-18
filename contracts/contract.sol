@@ -231,22 +231,6 @@ contract MetaBeasts is ERC1155, Ownable, ERC1155Burnable, ERC1155Supply {
         _mint(msg.sender, tokenId + 100, 1, "");
     }
 
-    function forgeMix(uint256 tokenId) external callerIsUser {
-        require(tokenId > 0, "INVALID_ID");
-        require(tokenId <= 100, "INVALID_ID");
-        require(
-            this.balanceOf(msg.sender, tokenId) >= 2,
-            "INSUFFICIENT_TIER1_CARDS"
-        );
-        require(
-            this.balanceOf(msg.sender, tokenId + 100) >= 1,
-            "INSUFFICIENT_TIER2_CARDS"
-        );
-        _burn(msg.sender, tokenId, 2);
-        _burn(msg.sender, tokenId + 100, 1);
-        _mint(msg.sender, tokenId + 200, 1, "");
-    }
-
     function totalBalanceOf(address addressToCheck)
         public
         view

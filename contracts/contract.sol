@@ -8,7 +8,6 @@ import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Burnable.sol";
 import "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Supply.sol";
 
-
 contract MetaBeasts is ERC1155, Ownable, ERC1155Burnable, ERC1155Supply {
     uint256[] public _IdsLeft;
     mapping(uint256 => uint256) public _Limits;
@@ -58,9 +57,17 @@ contract MetaBeasts is ERC1155, Ownable, ERC1155Burnable, ERC1155Supply {
         _Limits[100] = 21;
     }
 
-    modifier callerIsUser() {
-        require(tx.origin == msg.sender, "The caller is another contract");
+    modifier notContract() {
+        require((!_isContract(msg.sender)) && (msg.sender == tx.origin), "contract not allowed");
         _;
+    }
+
+    function _isContract(address addr) internal view returns (bool) {
+        uint256 size;
+        assembly {
+            size := extcodesize(addr)
+        }
+        return size > 0;
     }
 
     function matchAddresSigner(bytes memory signature)
@@ -123,7 +130,7 @@ contract MetaBeasts is ERC1155, Ownable, ERC1155Burnable, ERC1155Supply {
         _mint(msg.sender, 0, tokenQuantity, "");
     }
 
-    function buyAndOpenChests(uint256 quantity) external payable callerIsUser {
+    function buyAndOpenChests(uint256 quantity) external payable notContract {
         require(publicLive, "MINT_CLOSED");
         require(publicChestsMinted + quantity <= MB_PUBLIC, "EXCEED_PUBLIC");
         require(quantity <= MB_PER_MINT, "EXCEED_PER_MINT");
@@ -136,7 +143,7 @@ contract MetaBeasts is ERC1155, Ownable, ERC1155Burnable, ERC1155Supply {
     function privateBuy(uint256 quantity, bytes memory signature)
         external
         payable
-        callerIsUser
+        notContract
     {
         require(privateLive, "MINT_CLOSED");
         require(privateChestsMinted + quantity <= MB_PRIVATE, "EXCEED_PRIVATE");
@@ -154,7 +161,7 @@ contract MetaBeasts is ERC1155, Ownable, ERC1155Burnable, ERC1155Supply {
     function privateBuyAndOpenChest(uint256 quantity, bytes memory signature)
         external
         payable
-        callerIsUser
+        notContract
     {
         require(privateLive, "MINT_CLOSED");
         require(privateChestsMinted + quantity <= MB_PRIVATE, "EXCEED_PRIVATE");
@@ -169,7 +176,7 @@ contract MetaBeasts is ERC1155, Ownable, ERC1155Burnable, ERC1155Supply {
         mintRandom(msg.sender, quantity * 2);
     }
 
-    function buyChests(uint256 quantity) external payable callerIsUser {
+    function buyChests(uint256 quantity) external payable notContract {
         require(publicLive, "MINT_CLOSED");
         require(publicChestsMinted + quantity <= MB_PUBLIC, "EXCEED_PUBLIC");
         require(quantity <= MB_PER_MINT, "EXCEED_PER_MINT");
@@ -188,6 +195,8 @@ contract MetaBeasts is ERC1155, Ownable, ERC1155Burnable, ERC1155Supply {
                     abi.encodePacked(
                         block.difficulty,
                         block.coinbase,
+                        block.basefee,
+                        block.gaslimit,
                         msg.sender,
                         _Nonce
                     )
@@ -205,7 +214,7 @@ contract MetaBeasts is ERC1155, Ownable, ERC1155Burnable, ERC1155Supply {
         }
     }
 
-    function openChests(uint256 quantity) external callerIsUser {
+    function openChests(uint256 quantity) external notContract {
         require(
             this.balanceOf(msg.sender, 0) >= quantity,
             "INSUFFICIENT_CHESTS"
@@ -214,7 +223,7 @@ contract MetaBeasts is ERC1155, Ownable, ERC1155Burnable, ERC1155Supply {
         mintRandom(msg.sender, quantity * 2);
     }
 
-    function forge(uint256 tokenId) external callerIsUser {
+    function forge(uint256 tokenId) external notContract {
         require(tokenId > 0, "INVALID_ID");
         require(tokenId <= 200, "INVALID_ID");
         require(this.balanceOf(msg.sender, tokenId) >= 2, "INSUFFICIENT_CARDS");

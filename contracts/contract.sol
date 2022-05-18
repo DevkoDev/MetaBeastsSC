@@ -9,22 +9,14 @@ import "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Burnable.sol";
 import "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Supply.sol";
 
 
-contract MetaBeasts is
-    ERC1155,
-    Ownable,
-    ERC1155Burnable,
-    ERC1155Supply
-{
-
+contract MetaBeasts is ERC1155, Ownable, ERC1155Burnable, ERC1155Supply {
+    uint256[] public _IdsLeft;
     mapping(uint256 => uint256) public _Limits;
     mapping(uint256 => uint256) public _Mints;
     uint256 public _Nonce;
-
-
     using Counters for Counters.Counter;
     using ECDSA for bytes32;
     using Strings for uint256;
-
     uint256 public MB_TEAM_RESERVE = 1800;
     uint256 public MB_PUBLIC = 6000;
     uint256 public MB_PRIVATE = 2200;
@@ -43,17 +35,11 @@ contract MetaBeasts is
 
     bool public privateLive;
     bool public publicLive;
-    struct request {
-        bool prepared;
-        address owner;
-    }
-    mapping(uint256 => request) public openChest_requests;
 
-    constructor()
-        ERC1155(
-            "https://gateway.pinata.cloud/ipfs/QmZMWmqX9jatszvV5PoViFzsg77fNuUHo3KkQSBCruEVfT/{id}.json"
-        )
-    {
+    constructor() ERC1155("https://gateway.pinata.cloud/ipfs/QmZMWmqX9jatszvV5PoViFzsg77fNuUHo3KkQSBCruEVfT/{id}.json") {
+        for (uint256 index = 1; index <= 100; index++) {
+            _IdsLeft.push(index);
+        }
         for (uint256 index = 1; index <= 38; index++) {
             _Limits[index] = 263;
         }
@@ -77,47 +63,6 @@ contract MetaBeasts is
         _;
     }
 
-    function prepareChests(uint256 quantity) external callerIsUser {
-        require(this.balanceOf(msg.sender, 0) >= quantity, "INSUFFICIENT_CHESTS");
-        _burn(msg.sender, 0, quantity);
-        for (uint256 index = 1; index <= quantity; index++) {
-            openChest_requests[_Nonce + index].prepared = true;
-            openChest_requests[_Nonce + index].owner = msg.sender;
-        }
-        _Nonce += quantity;
-    }
-
-    function openChest(
-        uint256 requestId,
-        bytes memory signature,
-        uint256 tokenId
-    ) external {
-        require(openChest_requests[requestId].prepared, "INVALID_REQUEST");
-        require(openChest_requests[requestId].owner == msg.sender, "NOT_OWNER");
-        require(_Mints[tokenId] < _Limits[tokenId], "LIMIT_REACHED");
-        require(tokenId <= 100, "INVALID_TOKEN");
-        require(tokenId != 0, "INVALID_TOKEN");
-        require(matchSignerTokenId(signature, tokenId), "INVALID_SIGNATURE");
-
-        openChest_requests[requestId].prepared = false;
-        _Mints[tokenId]++;
-        _mint(msg.sender, tokenId, 1, "");
-    }
-
-    function matchSignerTokenId(bytes memory signature, uint256 tokenId)
-        private
-        view
-        returns (bool)
-    {
-        bytes32 hash = keccak256(
-            abi.encodePacked(
-                "\x19Ethereum Signed Message:\n32",
-                keccak256(abi.encodePacked(msg.sender, MB_SIG_WORD, tokenId))
-            )
-        );
-        return PRIVATE_SIGNER == hash.recover(signature);
-    }
-
     function matchAddresSigner(bytes memory signature)
         private
         view
@@ -136,7 +81,7 @@ contract MetaBeasts is
         _setURI(newuri);
     }
 
-    function gift(address[] calldata receivers, uint256 requestIdStart) external onlyOwner {
+    function gift(address[] calldata receivers) external onlyOwner {
         require(
             teamChestsMinted + (receivers.length / 2) <= MB_TEAM_RESERVE,
             "EXCEED_TEAM_RESERVE"
@@ -144,7 +89,7 @@ contract MetaBeasts is
         require(receivers.length % 2 == 0, "NOT_EVEN");
         teamChestsMinted = teamChestsMinted + (receivers.length / 2);
         for (uint256 i = 0; i < receivers.length; i++) {
-            this.prepareChests(receivers[i], 1);
+            mintRandom(receivers[i], 1);
         }
     }
 
@@ -155,7 +100,7 @@ contract MetaBeasts is
         );
         require(tokenQuantity % 2 == 0, "NOT_EVEN");
         teamChestsMinted = teamChestsMinted + (tokenQuantity / 2);
-       // mintRandom(msg.sender, tokenQuantity);
+        mintRandom(msg.sender, tokenQuantity);
     }
 
     function giftChest(address[] calldata receivers) external onlyOwner {
@@ -185,7 +130,7 @@ contract MetaBeasts is
         require(MB_PRICE * quantity <= msg.value, "INSUFFICIENT_ETH");
 
         publicChestsMinted = publicChestsMinted + quantity;
-       // mintRandom(msg.sender, quantity * 2);
+        mintRandom(msg.sender, quantity * 2);
     }
 
     function privateBuy(uint256 quantity, bytes memory signature)
@@ -221,7 +166,7 @@ contract MetaBeasts is
         require(MB_PRICE * quantity <= msg.value, "INSUFFICIENT_ETH");
         P_MINTERS[msg.sender] = P_MINTERS[msg.sender] + quantity;
         privateChestsMinted = privateChestsMinted + quantity;
-     //   mintRandom(msg.sender, quantity * 2);
+        mintRandom(msg.sender, quantity * 2);
     }
 
     function buyChests(uint256 quantity) external payable callerIsUser {
@@ -234,6 +179,41 @@ contract MetaBeasts is
         _mint(msg.sender, 0, quantity, "");
     }
 
+    function mintRandom(address to, uint256 quantity) private {
+        require(_IdsLeft.length > 0, "NO_TOKEN_LEFT");
+        require(quantity > 0, "NOT_ALLOWED");
+        for (uint256 index = 0; index < quantity; index++) {
+            uint256 randomIndex = uint256(
+                keccak256(
+                    abi.encodePacked(
+                        block.difficulty,
+                        block.coinbase,
+                        msg.sender,
+                        _Nonce
+                    )
+                )
+            ) % (_IdsLeft.length);
+
+            uint256 randomTokenId = _IdsLeft[randomIndex];
+            _Mints[randomTokenId]++;
+            _Nonce++;
+            if (_Mints[randomTokenId] == _Limits[randomTokenId]) {
+                _IdsLeft[randomIndex] = _IdsLeft[_IdsLeft.length - 1];
+                _IdsLeft.pop();
+            }
+            _mint(to, randomTokenId, 1, "");
+        }
+    }
+
+    function openChests(uint256 quantity) external callerIsUser {
+        require(
+            this.balanceOf(msg.sender, 0) >= quantity,
+            "INSUFFICIENT_CHESTS"
+        );
+        _burn(msg.sender, 0, quantity);
+        mintRandom(msg.sender, quantity * 2);
+    }
+
     function forge(uint256 tokenId) external callerIsUser {
         require(tokenId > 0, "INVALID_ID");
         require(tokenId <= 200, "INVALID_ID");
@@ -242,11 +222,21 @@ contract MetaBeasts is
         _mint(msg.sender, tokenId + 100, 1, "");
     }
 
-
-
-
-
-
+    function forgeMix(uint256 tokenId) external callerIsUser {
+        require(tokenId > 0, "INVALID_ID");
+        require(tokenId <= 100, "INVALID_ID");
+        require(
+            this.balanceOf(msg.sender, tokenId) >= 2,
+            "INSUFFICIENT_TIER1_CARDS"
+        );
+        require(
+            this.balanceOf(msg.sender, tokenId + 100) >= 1,
+            "INSUFFICIENT_TIER2_CARDS"
+        );
+        _burn(msg.sender, tokenId, 2);
+        _burn(msg.sender, tokenId + 100, 1);
+        _mint(msg.sender, tokenId + 200, 1, "");
+    }
 
     function totalBalanceOf(address addressToCheck)
         public
@@ -258,26 +248,6 @@ contract MetaBeasts is
             total = total + balanceOf(addressToCheck, index);
         }
         return total;
-    }
-
-    function getOwnedCards(address addressToCheck)
-        public
-        view
-        returns (uint256[300] memory)
-    {
-        uint256[300] memory cardsOwned;
-        for (uint256 index = 0; index < 300; index++) {
-            cardsOwned[index] = balanceOf(addressToCheck, index + 1);
-        }
-        return cardsOwned;
-    }
-
-    function getMintedCards() public view returns (uint256[300] memory) {
-        uint256[300] memory cardsOwned;
-        for (uint256 index = 0; index < 300; index++) {
-            cardsOwned[index] = totalSupply(index + 1);
-        }
-        return cardsOwned;
     }
 
     function totalCardsSupply() public view returns (uint256) {
@@ -334,11 +304,6 @@ contract MetaBeasts is
 
     function setPublicReserve(uint256 newCount) external onlyOwner {
         MB_PUBLIC = newCount;
-    }
-
-    // WIP
-    function withdraw() external onlyOwner {
-        payable(msg.sender).transfer(address(this).balance);
     }
 
     function _beforeTokenTransfer(

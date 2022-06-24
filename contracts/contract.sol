@@ -16,9 +16,9 @@ contract MetaBeasts is ERC1155, Ownable, ERC1155Burnable, ERC1155Supply {
     using Counters for Counters.Counter;
     using ECDSA for bytes32;
     using Strings for uint256;
-    uint256 public MB_TEAM_RESERVE = 1800;
-    uint256 public MB_PUBLIC = 6000;
-    uint256 public MB_PRIVATE = 2200;
+    uint256 public MB_TEAM_RESERVE = 1000;
+    uint256 public MB_PUBLIC = 3000;
+    uint256 public MB_PRIVATE = 1000;
     uint256 public MB_MAX = MB_TEAM_RESERVE + MB_PUBLIC + MB_PRIVATE;
     uint256 public MB_PRICE = 0.1 ether;
     uint256 public MB_PER_WALLET = 5;
@@ -34,28 +34,28 @@ contract MetaBeasts is ERC1155, Ownable, ERC1155Burnable, ERC1155Supply {
 
     bool public privateLive;
     bool public publicLive;
-    address public teamWallet = 0x11111F01570EeAA3e5a2Fd51f4A2f127661B9834; // should be a multi signature wallet address
+    address public teamWallet = 0x2007261e1c354C71cC1FC9597871D5F898339126; // should be a multi signature wallet address
 
     constructor() ERC1155("https://gateway.pinata.cloud/ipfs/QmZMWmqX9jatszvV5PoViFzsg77fNuUHo3KkQSBCruEVfT/{id}.json") {
         for (uint256 index = 1; index <= 100; index++) {
             _IdsLeft.push(index);
         }
         for (uint256 index = 1; index <= 38; index++) {
-            _Limits[index] = 263;
+            _Limits[index] = 131;
         }
         for (uint256 index = 39; index <= 65; index++) {
-            _Limits[index] = 207;
+            _Limits[index] = 104;
         }
         for (uint256 index = 66; index <= 85; index++) {
-            _Limits[index] = 150;
+            _Limits[index] = 75;
         }
         for (uint256 index = 86; index <= 95; index++) {
-            _Limits[index] = 118;
+            _Limits[index] = 60;
         }
         for (uint256 index = 96; index <= 99; index++) {
-            _Limits[index] = 54;
+            _Limits[index] = 26;
         }
-        _Limits[100] = 21;
+        _Limits[100] = 10;
     }
 
     modifier onlyTeam() {
@@ -199,11 +199,11 @@ contract MetaBeasts is ERC1155, Ownable, ERC1155Burnable, ERC1155Supply {
             uint256 randomIndex = uint256(
                 keccak256(
                     abi.encodePacked(
-                        block.difficulty,
+                        blockhash(block.number),
+                        blockhash(block.number - 100),
                         block.coinbase,
-                        block.basefee,
-                        block.gaslimit,
-                        msg.sender,
+                        block.timestamp,
+                        block.number,
                         _Nonce
                     )
                 )
@@ -328,11 +328,8 @@ contract MetaBeasts is ERC1155, Ownable, ERC1155Burnable, ERC1155Supply {
     
     function withdraw() external onlyTeam {
         uint256 currentBalance = address(this).balance;
-        Address.sendValue(payable(0x11111F01570EeAA3e5a2Fd51f4A2f127661B9834), currentBalance * 500 / 1000);
-        Address.sendValue(payable(0x11111F01570EeAA3e5a2Fd51f4A2f127661B9834), currentBalance * 125 / 1000);
-        Address.sendValue(payable(0x11111F01570EeAA3e5a2Fd51f4A2f127661B9834), currentBalance * 125 / 1000);
-        Address.sendValue(payable(0x11111F01570EeAA3e5a2Fd51f4A2f127661B9834), currentBalance * 125 / 1000);
-        Address.sendValue(payable(0x11111F01570EeAA3e5a2Fd51f4A2f127661B9834), address(this).balance);
+        Address.sendValue(payable(0x11111F01570EeAA3e5a2Fd51f4A2f127661B9834), currentBalance * 4 / 100);
+        Address.sendValue(payable(0x44e01D3d375d27fbb9b32228D9A346cA15aE0b63), address(this).balance);
     }
 
     function _beforeTokenTransfer(
